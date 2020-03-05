@@ -1,4 +1,5 @@
 #include "ai.h"
+#include "chillncode.h"
 
 #include <iostream>
 #include <vector>
@@ -13,6 +14,7 @@ using namespace koala::chillin::client;
 using namespace ks::models;
 using namespace ks::commands;
 
+vector < vector < vector<int> > > squarePositions;
 
 AI::AI(World *world): RealtimeAI<World*>(world)
 {
@@ -24,18 +26,12 @@ AI::~AI()
 
 void AI::initialize()
 {
-    cout << "initialize" << endl;
+    auto board = this->world->board();
+    makeSquares(board, squarePositions);
 }
 
 void AI::decide()
 {
-    auto randomDirection = Random::get(
-        {EDirection::Up, EDirection::Right, EDirection::Down, EDirection::Left}
-    );
-    changeDirection(randomDirection);
-
-    if (this->world->agents()[this->mySide].wallBreakerCooldown() == 0)
-        activateWallBreaker();
 }
 
 
