@@ -1,2 +1,4 @@
 TODO:
-[ ]making squares algorithm
+[ ]making squares function
+[ ]finding squares weight function
+[ ]finding best root between two points function

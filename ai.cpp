@@ -15,6 +15,7 @@ using namespace ks::models;
 using namespace ks::commands;
 
 vector < vector < vector<int> > > squarePositions;
+int squareWeights[squarePositions.size()];
 
 AI::AI(World *world): RealtimeAI<World*>(world)
 {
@@ -27,11 +28,13 @@ AI::~AI()
 void AI::initialize()
 {
     auto board = this->world->board();
-    makeSquares(board, squarePositions);
+    chillncode obj;
+    obj.makeSquares(board, squarePositions);
 }
 
 void AI::decide()
 {
+
 }
 
 
