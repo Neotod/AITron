@@ -14,7 +14,26 @@ using namespace ks::commands;
 #include <fstream>
 #include <iostream>
 
-class chillncode
+
+class Square
+{
+private:
+    std::vector < std::vector < std::vector <int> > > positions;
+
+public:
+    std::vector < std::vector < std::vector <int> > > squarePositions() const;
+    int findSides(std::vector < std::vector<ECell> > &, int, int);
+    void makeSquares(std::vector < std::vector < std::vector <int> > > &positions);
+    void findBestRoute(int startPos[], int endPos[], std::vector < std::vector <int> > &positions);
+    int giveRouteLength(int startPos[], int endPos[]);
+    int findSquareWeight(std::vector < std::vector <ECell> > &board,int agentPos[], int squarePos[][2],
+                         AI *ai, std::string teamName);
+    int getRouteLength(int startPos[], int endPos[]);
+    void findNearestSquarePos(int agentPos[], int squarePos[][2], int nearestPos[]);
+};
+
+
+class Chillncode
 {
 public:
     std::vector < std::vector < std::vector <int> > > squarePositions() const;
