@@ -1,7 +1,6 @@
 #ifndef CHILLNCODE_H
 #define CHILLNCODE_H
 
-#endif // CHILLNCODE_H
 
 #include "ks/models.h"
 #include "ks/commands.h"
@@ -15,9 +14,31 @@ using namespace ks::commands;
 #include <fstream>
 #include <iostream>
 
-int findSides(std::vector < std::vector<ECell> > &board, int posY, int posX)
+class chillncode
 {
-    int i  = posY, j = posX;
+public:
+    std::vector < std::vector < std::vector <int> > > squarePositions() const;
+    int findSides(std::vector < std::vector<ECell> > &, int, int);
+    void makeSquares(std::vector < std::vector < std::vector <int> > > &positions);
+    void findBestRoute(int startPos[], int endPos[], std::vector < std::vector <int> > &positions);
+    int giveRouteLength(int startPos[], int endPos[]);
+    int findSquareWeight(std::vector < std::vector <ECell> > &board,int agentPos[], int squarePos[][2],
+                         AI *ai, std::string teamName);
+    int getRouteLength(int startPos[], int endPos[]);
+    void findNearestSquarePos(int agentPos[], int squarePos[][2], int nearestPos[]);
+
+private:
+    std::vector < std::vector < std::vector <int> > > ــsquarePositions;
+};
+
+inline std::vector < std::vector < std::vector <int> > > chillncode::squarePositions() const
+{
+    return ــsquarePositions;
+}
+
+int chillncode::findSides(std::vector<std::vector<ECell> > &board, int posY, int posX)
+{
+    int i = posY, j = posX;
     int counter = 1;
 
     if(posY < board.size()-3)
@@ -79,7 +100,8 @@ int findSides(std::vector < std::vector<ECell> > &board, int posY, int posX)
     }
     return 1;
 }
-void makeSquares(std::vector < std::vector<ECell> > &board, std::vector < std::vector < std::vector <int> > > &positions)
+
+void chillncode::makeSquares(std::vector < std::vector < std::vector <int> > > &positions)
 {
     int i = 1, j = 1;
     while(i < board.size() - 1)
@@ -148,5 +170,84 @@ void makeSquares(std::vector < std::vector<ECell> > &board, std::vector < std::v
         }
     }
 }
+
+void chillncode::findBestRoute(int startPos[], int endPos[], std::vector < std::vector <int> > &positions)
+{
+
+}
+
+int chillncode::getRouteLength(int startPos[], int endPos[])
+{
+
+}
+
+void chillncode::findNearestSquarePos(int agentPos[], int squarePos[][2], int nearestPos[])
+{
+    int sides = squarePos[0][0] - squarePos[1][0] + 1;
+
+    if(sides != 1)
+    {
+        int minDistanceX = 0, minDistanceY = 0;
+        unsigned int distanceX = 0, distanceY = 0;
+        int i = squarePos[0][0], j = squarePos[0][1];
+        for(int k = 0; k < sides*sides; k++)
+        {
+            distanceY = i - agentPos[0];
+            distanceX = j - agentPos[1];
+            if((distanceY < minDistanceY) && (distanceX < minDistanceX))
+            {
+                minDistanceY = distanceY;
+                nearestPos[0] = i;
+                minDistanceX = distanceX;
+                nearestPos[1] = j;
+            }
+
+            if((i == squarePos[0][0]) && (squarePos[0][1] <= j) && (j < squarePos[1][1]))
+                j++;
+            else if((squarePos[0][0] <= i) && (i < squarePos[1][0]) && (j == squarePos[1][1]))
+                i++;
+            else if((i == squarePos[1][0]) && (squarePos[0][1] < j) && (j <= squarePos[1][1]))
+                j--;
+            else if((squarePos[0][0] < i) && (i <= squarePos[1][0]) && (j == squarePos[0][0]))
+                i--;
+        }
+    }
+    else
+    {
+        nearestPos[0] = squarePos[0][0];
+        nearestPos[1] = squarePos[0][1];
+    }
+}
+
+int chillncode::findSquareWeight(std::vector < std::vector <ECell> > &board, int agentPos[], int squarePos[][2],
+                                 AI *ai, std::string teamName)
+{
+    //    int agentPos[] = {ai->world->agents()[ai->mySide].position().y(), ai->world->agents()[ai->mySide].position().x()};
+    auto myWall = ECell::Empty;
+    if(teamName == "Blue")
+        myWall = ECell::BlueWall;
+    else
+        myWall = ECell::YellowWall;
+
+    int emptyWalls = 0, enemyWalls = 0, myWalls = 0;
+    for(int i = squarePos[0][0]; i <= squarePos[1][0]; i++)
+    {
+        for(int j = squarePos[0][1]; j <= squarePos[1][1]; j++)
+        {
+            if(board[i][j] == ECell::Empty)
+                emptyWalls++;
+            else if(board[i][j] == myWall)
+                myWalls++;
+            else
+                enemyWalls++;
+        }
+    }
+
+    int nearestPos[2];
+    this->findNearestSquarePos(agentPos, squarePos, nearestPos);
+
+}
+
+#endif // CHILLNCODE_H
 
 
