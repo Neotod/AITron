@@ -8,7 +8,6 @@
 using namespace koala::chillin::client;
 using namespace ks::models;
 
-
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
