@@ -27,7 +27,6 @@ public:
 public: //read-only functions
     std::vector < std::vector <int> > position();
     void setPosition(std::shared_ptr< std::vector < std::vector <int> > > &vector);
-    std::shared_ptr< std::vector <int> > getNearestPos() const;
     std::shared_ptr< std::vector < std::vector <int> > > getBestRoutePos() const;
     int getWeight() const;
     int getRouteLength() const;
@@ -35,11 +34,6 @@ public: //read-only functions
 
 Square::Square()
 {
-}
-
-void Square::findBestRoute()
-{
-
 }
 
 inline std::vector < std::vector <int> > Square::position()
@@ -50,16 +44,6 @@ inline std::vector < std::vector <int> > Square::position()
 inline void Square::setPosition(std::shared_ptr< std::vector < std::vector <int> > > &position)
 {
     positionPtr = position;
-}
-
-inline std::shared_ptr< std::vector <int> > Square::getNearestPos() const
-{
-    return nearestPos;
-}
-
-inline std::shared_ptr< std::vector < std::vector <int> > > Square::getBestRoutePos() const
-{
-    return bestRoutePos;
 }
 
 inline int Square::getWeight() const
