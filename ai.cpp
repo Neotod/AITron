@@ -17,11 +17,12 @@ using namespace ks::commands;
 
 std::vector <Square> squares;
 std::vector <int> nearestSquares;
-int currentSquareNum;
+std::vector < std::vector <int> > reachingPath;
+std::vector <int> lastPosition;
 
 Chillncode chillncode;
 
-std::vector < std::vector <int> > reachingPath;
+int currentSquareNum;
 
 AI::AI(World *world): RealtimeAI<World*>(world)
 {
@@ -36,19 +37,41 @@ void AI::initialize()
     vector < vector <ECell> > board = this->world->board();
     auto agent = this->world->agents()[this->mySide];
 
-    chillncode.setRequirements(&board, &squares, &nearestSquares, agent, this->mySide);
+    chillncode.setRequirements(&board, &squares, agent, this->mySide);
     chillncode.makeSquares(squares);
+    chillncode.findNearestSquares(nearestSquares);
     currentSquareNum = chillncode.findSquareNum(agent.position().y(), agent.position().x());
-    chillncode.findNearestSquares(nearestSquares, currentSquareNum);
+    chillncode.findBestRoute(reachingPath, lastPosition);
+    lastPosition = {agent.position().y(), agent.position().x()};
 }
 
 void AI::decide()
 {
-    bool newSquare = chillncode.isNewSquare(currentSquareNum);
-    if(newSquare == true)
+    bool isNewSquare = chillncode.isNewSquare(currentSquareNum);
+    if(isNewSquare == true)
     {
-           chillncode.findNearestSquares(nearestSquares, currentSquareNum);
+           chillncode.findNearestSquares(nearestSquares);
     }
+    chillncode.mostWeightedNearestSquare(nearestSquares);
+    chillncode.findBestRoute(reachingPath, lastPosition);
+
+    Agent agent = this->world->agents()[this->mySide];
+    lastPosition = {agent.position().y(), agent.position().x()};
+
+    if(agent.wallBreakerCooldown() == 0)
+    {
+        vector < vector <ECell> > board = this->world->board();
+        auto enemyWall = ECell::Empty;
+        if(this->mySide == "Blue")
+            enemyWall = ECell::YellowWall;
+        else
+            enemyWall = ECell::BlueWall;
+        if(board[reachingPath[1][0]][reachingPath[1][1]] == enemyWall)
+            this->activateWallBreaker();
+    }
+
+    EDirection nextDirection = chillncode.nextDirection(reachingPath[1]);
+    changeDirection(nextDirection);
 }
 
 
