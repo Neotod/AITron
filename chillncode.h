@@ -9,12 +9,11 @@
 #include <memory>
 #include <queue>
 #include <complex>
+#include <algorithm>
 
 using namespace koala::chillin::client;
 using namespace ks::models;
 using namespace ks::commands;
-
-
 
 class Chillncode
 {
@@ -22,30 +21,31 @@ private:
     std::shared_ptr < std::vector < std::vector <ECell> > > boardPtr;
     Agent myAgent;
     std::shared_ptr < std::vector <Square> > squaresPtr;
+    std::vector < std::vector <int> > entryPositions;
     std::string teamName;
-    std::shared_ptr < std::vector <int> > nearestSquaresPtr;
     int mostWeightedSquareNum;
     int currentSquareNum;
 public:
-    int findSides(int, int);
-    std::vector <Square> makeSquares(std::vector <Square> &squares);
+    void makeSquares(std::vector <Square> &squares);
     void setRequirements(std::vector < std::vector <ECell> > *board, std::vector <Square> *squares,
-                        std::vector <int> *nearestSquares, Agent agent, std::string teamStr);
-    void findSquareWeight();
-    void findNearestSquares(std::vector <int> &nearestSquares, int currentSquareNum);
-    void findNearestSquaresWeight(std::vector <Square> &nearestSquares);
+                         Agent agent, std::string teamStr);
+    void findNearestSquares(std::vector <int> &nearestSquares);
+    void mostWeightedNearestSquare(std::vector <int> &nearestSquares);
     int findSquareNum(int posY, int posX);
     bool isNewSquare(int current);
-    void setAdjacencyMatrix(std::vector < std::vector <bool> > &adjacencyMatrix, std::vector <int> &endPos);
-    bool isReached(std::vector < std::vector <int> > &reachedVertices, int i, int j);
-    void findBestRoute(std::vector < std::vector <int> > &route);
-    void findEntryPositions(std::vector < std::vector <int> > &positions);
-    void findAllRoutes(std::vector < std::vector <int> > &allRoutes, std::vector <int> &endPos);
+    void findBestRoute(std::vector < std::vector <int> > &finalRoute, std::vector <int> &lastPos);
+    EDirection nextDirection(std::vector <int> &nextPos);
     Chillncode();
+private:
+    bool isReached(std::vector < std::vector <int> > &reachedVertices, int i, int j);
+    void setEntryPositions();
+    void findAllRoutes(std::vector < std::vector < std::vector <int> > > &allRoutes, std::vector <int> &destination, std::vector <int> &lastPos);
+    bool isRouteReachable(std::vector < std::vector <int> > &route);
+    void findMostWeightedNearestSquare(std::vector <int> &nearestSquares);
+    int findRouteWeight(std::vector < std::vector <int> > &routePos);
 public: //read-only functions
     std::vector <Square> squares() const;
     std::vector < std::vector <ECell> > board() const;
-    std::vector <int>  nearestSquares() const;
 };
 
 
@@ -63,26 +63,19 @@ inline std::vector < std::vector <ECell> > Chillncode::board() const
     return *boardPtr;
 }
 
-inline std::vector <int> Chillncode::nearestSquares() const
-{
-    return *nearestSquaresPtr;
-}
-
 void Chillncode::setRequirements(std::vector < std::vector <ECell> > *board, std::vector <Square> *squares,
-                                 std::vector <int> *nearestSquares, Agent agent, std::string teamStr) //this funciton must call in init and each decide function
+                                 Agent agent, std::string teamStr)
 {
     std::shared_ptr < std::vector < std::vector <ECell> > > boardSharedPtr(board);
     boardPtr = boardSharedPtr;
     std::shared_ptr < std::vector <Square> > squaresSharedPtr(squares);
     squaresPtr = squaresSharedPtr;
-    std::shared_ptr < std::vector <int> > nearestSquaresSharedPtr(nearestSquares);
-    nearestSquaresPtr = nearestSquaresSharedPtr;
     myAgent = agent;
     teamName = teamStr;
     currentSquareNum = findSquareNum(myAgent.position().y(), myAgent.position().x());
 }
 
-std::vector <Square> Chillncode::makeSquares(std::vector <Square> &squares)
+void Chillncode::makeSquares(std::vector <Square> &squares)
 {
     int posY = 1, posX = 1;
     while(posY < board().size() - 1)
@@ -111,9 +104,9 @@ std::vector <Square> Chillncode::makeSquares(std::vector <Square> &squares)
                 else if((i == posY + 1) && (posX < j) && (j <= posX + 1))
                     j--;
 
-                if(i < 1 || j < 1 || i > board.size() - 2 || j > board[0].size() - 2)
+                if(i < 1 || j < 1 || i > board().size() - 2 || j > board()[0].size() - 2)
                     continue;
-                if(board[i][j] == ECell::AreaWall)
+                if(board()[i][j] == ECell::AreaWall)
                 {
                     isThreeSides = false, isTwoSides = false;
                     continue;
@@ -161,7 +154,7 @@ std::vector <Square> Chillncode::makeSquares(std::vector <Square> &squares)
                 {
                     k++;
                 }
-                squarePositions.push_back({{allPositions[l][0], allPositions[l][1]}, {allPositions[l][0], allPositions[l][1]}});
+                squarePositions.push_back({{allPositions[k][0], allPositions[k][1]}, {allPositions[k][0], allPositions[k][1]}});
             }
         }
 
@@ -177,13 +170,10 @@ std::vector <Square> Chillncode::makeSquares(std::vector <Square> &squares)
         }
 
         posY += 3, posX += 3;
-        if(posX > board[0].size() - 2)
+        if(posX > board()[0].size() - 2)
             posX = 1;
-
     }
-    return squares;
 }
-
 
 bool Chillncode::isReached(std::vector < std::vector <int> > &reachedVertices, int i, int j)
 {
@@ -202,19 +192,19 @@ bool Chillncode::isReached(std::vector < std::vector <int> > &reachedVertices, i
         return false;
 }
 
-
-//peida kardan hame rah haye momken ba BFS
-void Chillncode::findAllRoutes(std::vector < std::vector <int> > &allRoutes, std::vector <int> &destination)
+void Chillncode::findAllRoutes(std::vector < std::vector < std::vector <int> > > &allRoutes, std::vector <int> &destination, std::vector <int> &lastPos)
 {
-    auto agentPos = {myAgent.position().y(), myAgent.position().x()};
+    std::vector <int> agentPos = {myAgent.position().y(), myAgent.position().x()};
     std::vector < std::vector <int> > reachedVertices;
     std::queue < std::vector <int> > queue;
+    std::vector < std::vector <int> > currentSquarePos = squares()[currentSquareNum].position();
     int i, j;
     queue.push(agentPos);
     allRoutes.push_back({{agentPos[0], agentPos[1]}});
     while(queue.size() != 0)
     {
-        std::vector <int> currentPos = queue.pop();
+        std::vector <int> currentPos = queue.front();
+        queue.pop();
         i = currentPos[0], j = currentPos[1];
         reachedVertices.push_back({i, j});
         std::vector <int> rowSteps = {1, -1, 0, 0};
@@ -226,9 +216,9 @@ void Chillncode::findAllRoutes(std::vector < std::vector <int> > &allRoutes, std
             int jj = j + columnSteps[k];
             if((ii > currentSquarePos[1][0] || jj > currentSquarePos[1][1] || ii < currentSquarePos[0][0] || jj < currentSquarePos[0][1])
                     || (ii != destination[0] && jj != destination[1]))
-            {
                 continue;
-            }
+            if((i == currentPos[0] && j == currentPos[1]) && (ii == lastPos[0] && jj == lastPos[1]))
+                continue;
             neighbors.push_back({ii, jj});
             bool reached = isReached(reachedVertices, ii, jj);
             if(reached == false)
@@ -241,10 +231,11 @@ void Chillncode::findAllRoutes(std::vector < std::vector <int> > &allRoutes, std
            if(allRoutes[m].back()[0] == i, allRoutes[m].back()[1] == j)
            {
                std::vector < std::vector <int> > routeCopy = allRoutes[m];
-               std::vector < std::vector <int> >::iterator it = allRoutes.begin();
+               std::vector < std::vector < std::vector <int> > >::iterator it = allRoutes.begin();
                allRoutes.erase(it + m);
                for(int l = 0; l < neighbors.size(); l++)
                {
+                   bool reached = false;
                    reached = isReached(allRoutes[m], neighbors[l][0], neighbors[l][1]);
                    if(reached = false)
                    {
@@ -258,99 +249,118 @@ void Chillncode::findAllRoutes(std::vector < std::vector <int> > &allRoutes, std
     }
 }
 
-void Chillncode::findEntryPositions(std::vector < std::vector <int> > &positions)
+void Chillncode::setEntryPositions()
 {
+    entryPositions.clear();
     auto currentSquarePos = squares()[currentSquareNum].position();
     auto mostWeightedSquarePos = squares()[mostWeightedSquareNum].position();
     int sides = currentSquarePos[1][0] - currentSquarePos[0][0] + 1;
-    int sides2 = mostWeightedSquarePos[1][0] - mostWeightedSquarePos[0][0] + 1;
-    int round = 1, i = currentSquarePos[0][0], j = currentSquarePos[0][1];
+    int i = currentSquarePos[0][0], j = currentSquarePos[0][1];
     bool breakFor = false;
 
-    for(int k = 0; k < 4; k++)
+    int n = 0;
+    std::vector <int> iSteps = {-1, n, sides, n};
+    std::vector <int> jSteps = {n, sides, n, -1};
+
+    for(int l = 0; l < sides; l++)
     {
-        if(round == 1)
+        for(int k = 0; k < 4; k++)
         {
-            int temp = i - 1;
-            if(temp == mostWeightedSquarePos[1][0])
+            i += iSteps[k], j += jSteps[k];
+            while((mostWeightedSquarePos[0][0] <= i && i <= mostWeightedSquarePos[1][0]) &&
+                  (mostWeightedSquarePos[0][1] <= j && j <= mostWeightedSquarePos[1][1]))
             {
-                for(int l = 0; l < sides2; l++)
-                {
-                    positions.push_back({temp, j});
-                    j++;
-                }
-                breakFor == true;
-            }
-            j++;
-        }
-        if(round == 2)
-        {
-            int temp = j + 1;
-            if(temp == mostWeightedSquarePos[0][1])
-            {
-                for(int l = 0; l < sides2; l++)
-                {
-                    positions.push_back({i, temp});
+                entryPositions.push_back({i, j});
+                if(iSteps[k] == n)
                     i++;
-                }
-                breakFor == true;
+                if(jSteps[k] == n)
+                    j++;
+                breakFor = true;
             }
-            i++;
         }
-        if(round == 3)
-        {
-            int temp = i + 1;
-            if(temp == mostWeightedSquarePos[0][0])
-            {
-                for(int l = 0; l < sides2; l++)
-                {
-                    positions.push_back({temp, j});
-                    j--;
-                }
-                breakFor == true;
-            }
-            j--;
-        }
-        if(round == 4)
-        {
-            int temp = j - 1;
-            if(temp == mostWeightedSquarePos[1][1])
-            {
-                for(int l = 0; l < sides2; l++)
-                {
-                    positions.push_back({i, temp});
-                    i--;
-                }
-                breakFor == true;
-            }
-            i--;
-        }
-        if((k % sides) == 0)
-            round++;
         if(breakFor == true)
             break;
+        n++;
+        i = currentSquarePos[0][0], j = currentSquarePos[0][1];
     }
 }
 
-void Chillncode::findBestRoute(std::vector < std::vector <int> > &finalRoute)
+void Chillncode::findBestRoute(std::vector < std::vector <int> > &finalRoute, std::vector <int> &lastPos)
 {
-    std::vector < std::vector <int> > positions;
-    findEntryPositions(positions);
-    auto agentPos = {myAgent.position().y(), myAgent.position().x()};
-    for(int k = 0; k < positions.size(); k++)
+    int maxWeight = 0;
+    std::vector < std::vector < std::vector <int> > > mostWeightedRoutes;
+    for(int i = 0; i < entryPositions.size(); i++)
     {
         std::vector < std::vector < std::vector <int> > > allRoutes;
-        findAllRoutes(allRoutes, positions[k]);
+        findAllRoutes(allRoutes, entryPositions[i], lastPos);
+        std::vector < std::vector <int> > maxRoute;
+        for(int j = 0; j < allRoutes.size(); j++)
+        {
+            if(allRoutes[j].back() == entryPositions[i])
+            {
+                int weight = findRouteWeight(allRoutes[j]);
+                if(weight > maxWeight)
+                {
+                    bool isReachable = isRouteReachable(allRoutes[j]);
+                    if(isReachable == true)
+                    {
+                        maxWeight = weight;
+                        maxRoute = allRoutes[j];
+                    }
+                }
+            }
+        }
+        mostWeightedRoutes.push_back(maxRoute);
     }
 
-    //findRouteWeight for each route
-    //return best Root :)
+    maxWeight = 0;
+    for(std::vector < std::vector <int> > route : mostWeightedRoutes)
+    {
+        int weight = findRouteWeight(route);
+        if(weight > maxWeight)
+        {
+            maxWeight = weight;
+            finalRoute = route;
+        }
+    }
+}
+
+bool Chillncode::isRouteReachable(std::vector < std::vector <int> > &route)
+{
+    auto myWall = ECell::Empty;
+    if(myAgent.name() == "Blue")
+        myWall = ECell::BlueWall;
+    else
+        myWall = ECell::YellowWall;
+
+    int reachedWalls = 0;
+    for(std::vector <int> pos : route)
+        if(board()[pos[0]][pos[1]] == ECell::BlueWall || board()[pos[0]][pos[1]] == ECell::YellowWall)
+            reachedWalls++;
+
+
+    if(myAgent.wallBreakerCooldown() == 0)
+    {
+        if(reachedWalls < myAgent.wallBreakerRemTime())
+            return true;
+        else
+            return false;
+    }
+    else
+    {
+        int health = myAgent.health();
+        if(reachedWalls < health)
+            return true;
+        else
+            return false;
+    }
+
 }
 
 int Chillncode::findRouteWeight(std::vector < std::vector <int> > &routePos)
 {
     auto myWall = ECell::Empty;
-    if(teamName == "Blue")
+    if(myAgent.name() == "Blue")
         myWall = ECell::BlueWall;
     else
         myWall = ECell::YellowWall;
@@ -358,27 +368,27 @@ int Chillncode::findRouteWeight(std::vector < std::vector <int> > &routePos)
     for(int i = 0; i < routePos.size(); i++)
     {
         int posI = routePos[i][0], posJ = routePos[i][1];
-        if(board[posI][posJ] == ECell::Empty)
+        if(board()[posI][posJ] == ECell::Empty)
             emptyWalls++;
-        else if(board[posI][posJ] == myWall)
+        else if(board()[posI][posJ] == myWall)
             myWalls++;
         else
             enemyWalls++;
     }
 
-    int weight;
+    int weight = (emptyWalls * 1) + (myWalls * -1) + (enemyWalls * 0.6);
+    return weight;
 }
 
 bool Chillncode::isNewSquare(int current)
 {
-    int currentSquare = findSquareNum(myAgent.position().y(), myAgent.position().x());
-    if(current != currentSquare)
+    if(current != currentSquareNum)
         return true;
     else
         return false;
 }
 
-void Chillncode::findNearestSquaresWeight(std::vector <Square> &nearestSquares)
+void Chillncode::findMostWeightedNearestSquare(std::vector <int> &nearestSquares)
 {
     auto myWall = ECell::Empty;
 
@@ -390,7 +400,7 @@ void Chillncode::findNearestSquaresWeight(std::vector <Square> &nearestSquares)
     int myWallsNum = 0, enemyWallsNum = 0, emptyWallsNum;
     for(int k = 0; k < nearestSquares.size(); k++)
     {
-        auto squarePos = squares()[nearestSquares[k]].position();
+        std::vector < std::vector <int> > squarePos = squares()[nearestSquares[k]].position();
         for(int i = squarePos[0][0]; i <= squarePos[1][0]; i++)
         {
             for(int j = squarePos[0][1]; j <= squarePos[1][1]; j++)
@@ -433,73 +443,65 @@ int Chillncode::findSquareNum(int posY, int posX)
         }
         squareNum++;
     }
+    return squareNum;
 }
 
-void Chillncode::findNearestSquares(std::vector <int> &nearestSquares, int currentSquareNum)
+void Chillncode::mostWeightedNearestSquare(std::vector <int> &nearestSquares)
+{
+    findMostWeightedNearestSquare(nearestSquares);
+    setEntryPositions();
+}
+
+void Chillncode::findNearestSquares(std::vector <int> &nearestSquares)
 {
     auto squarePos = squares()[currentSquareNum].position();
-    int i = squarePos[0][0] - 1, j = squarePos[0][1];
-    while(j <= squarePos[1][1])
-    {
-        if(board()[i][j] != ECell::AreaWall)
-        {
-            int number = findSquareNum(i, j);
-            bool isExist = false;
-            for(int k = 0; k < nearestSquares.size(); k++)
-                if(nearestSquares[k] == number)
-                    isExist = true;
-            if(isExist == false)
-                nearestSquares.push_back(number);
-        }
-        j++;
-    }
+    int sides = squarePos[1][0] - squarePos[0][0] + 1;
+    int i = squarePos[0][0], j = squarePos[0][1];
+    bool breakFor = false;
 
-    i = squarePos[0][0];
-    while(i <= squarePos[1][0])
-    {
-        if(board()[i][j] != ECell::AreaWall)
-        {
-            int number = findSquareNum(i, j);
-            bool isExist = false;
-            for(int k = 0; k < nearestSquares.size(); k++)
-                if(nearestSquares[k] == number)
-                    isExist = true;
-            if(isExist == false)
-                nearestSquares.push_back(number);
-        }
-        i++;
-    }
+    int n = 0;
+    std::vector <int> iSteps = {-1, n, sides, n};
+    std::vector <int> jSteps = {n, sides, n, -1};
 
-    j = squarePos[1][1];
-    while(j >= squarePos[0][1])
+    for(int l = 0; l < sides; l++)
     {
-        if(board()[i][j] != ECell::AreaWall)
+        for(int k = 0; k < 4; k++)
         {
+            i += iSteps[k], j += jSteps[k];
             int number = findSquareNum(i, j);
             bool isExist = false;
             for(int k = 0; k < nearestSquares.size(); k++)
                 if(nearestSquares[k] == number)
+                {
                     isExist = true;
+                    break;
+                }
             if(isExist == false)
                 nearestSquares.push_back(number);
         }
-        j--;
+        if(breakFor == true)
+            break;
+        n++;
+        i = squarePos[0][0], j = squarePos[0][1];
     }
+}
 
-    i = squarePos[1][1];
-    while(i >= squarePos[0][1])
+EDirection Chillncode::nextDirection(std::vector <int> &nextPos)
+{
+    std::vector <int> agentPos = {myAgent.position().y(), myAgent.position().x()};
+    if(agentPos[0] == nextPos[0])
     {
-        if(board()[i][j] != ECell::AreaWall)
-        {
-            int number = findSquareNum(i, j);
-            bool isExist = false;
-            for(int k = 0; k < nearestSquares.size(); k++)
-                if(nearestSquares[k] == number)
-                    isExist = true;
-            if(isExist == false)
-                nearestSquares.push_back(number);
-        }
-        i--;
+        if(nextPos[1] - agentPos[1] == 1)
+            return EDirection::Right;
+        else
+            return EDirection::Left;
+    }
+    else if(agentPos[1] == nextPos[1])
+    {
+        if(nextPos[0] - agentPos[0] == 1)
+            return EDirection::Up;
+        else
+            return EDirection::Down;
     }
 }
 
