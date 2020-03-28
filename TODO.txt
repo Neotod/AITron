@@ -1,4 +1,10 @@
 TODO:
-[ ]making squares function
-[ ]finding squares weight function
-[ ]finding best root between two points function
+[+]making squares function
+[+]finding squares weight function
+[+]finding best root between two points function
+[+]debug find nearest squares function
+[+]write wallbreaker functions and fix it
+[+]debug finding routes functions(stage 1)
+[+]test that bitch :)))
+[ ]debug finding routes functions(stage 2: algorithm can't find all possible routes)
+
