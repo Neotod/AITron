@@ -51,4 +51,5 @@ HEADERS += \
     ks/models.h \
     ai.h \
     effolkronium/random.hpp \
-    chillncode.h
+    chillncode.h \
+    square.h
