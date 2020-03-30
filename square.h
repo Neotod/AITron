@@ -1,64 +1,55 @@
 #ifndef SQUARE_H
 #define SQUARE_H
 
+#include "ai.h"
 #include "ks/models.h"
 #include "ks/commands.h"
-#include <memory>
 #include <vector>
 
 using namespace koala::chillin::client;
 using namespace ks::models;
 using namespace ks::commands;
 
-
 class Square
 {
 private:
-    int weight;
-    std::shared_ptr< std::vector < std::vector <int> > > bestRoutePos;
-    std::shared_ptr< std::vector < std::vector <int> > > positionPtr;
+    std::vector <int> nearestSquaresVar;
+    std::vector < std::vector <int> > positionVar;
 
 public:
-    void findBestRoute();
-    int findSquareWeight();
-    void setWeight(int squareWeight);
+    void setPosition(std::shared_ptr< std::vector < std::vector <int> > > position);
+    void setNearestSquares(std::shared_ptr < std::vector <int> > nearestSquaresPtr);
     Square();
 
 public: //read-only functions
-    std::vector < std::vector <int> > position();
-    void setPosition(std::shared_ptr< std::vector < std::vector <int> > > &vector);
-    std::shared_ptr< std::vector < std::vector <int> > > getBestRoutePos() const;
-    int getWeight() const;
-    int getRouteLength() const;
+    std::vector < std::vector <int> > position() const;
+    std::vector <int> nearestSquares() const;
 };
 
+
+//implementations:
 Square::Square()
 {
 }
 
-inline std::vector < std::vector <int> > Square::position()
+inline std::vector < std::vector <int> > Square::position() const
 {
-    return *positionPtr;
+    return positionVar;
 }
 
-inline void Square::setPosition(std::shared_ptr< std::vector < std::vector <int> > > &position)
+inline void Square::setPosition(std::shared_ptr< std::vector < std::vector <int> > > positionPtr)
 {
-    positionPtr = position;
+    positionVar = *positionPtr;
 }
 
-inline int Square::getWeight() const
+inline void Square::setNearestSquares(std::shared_ptr < std::vector <int> > nearestSquaresPtr)
 {
-    return weight;
+    nearestSquaresVar = *nearestSquaresPtr;
 }
 
-inline int Square::getRouteLength() const
+inline std::vector <int> Square::nearestSquares() const
 {
-
+    return nearestSquaresVar;
 }
 
-inline void Square::setWeight(int squareWeight)
-{
-    weight = squareWeight;
-}
-
-#endif // SQUARE_H
+#endif //SQUARE_H
