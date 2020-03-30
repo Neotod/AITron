@@ -1,5 +1,6 @@
 *.autosave
 *.pro.user
+/chillncode.h.Pj9704
 
 external/*
 !external/README
