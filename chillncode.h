@@ -6,7 +6,7 @@
 #include "ai.h"
 #include "square.h"
 #include <vector>
-#include <queue>
+#include <stack>
 
 using namespace koala::chillin::client;
 using namespace ks::models;
@@ -29,7 +29,7 @@ public:
     void setRequirements(std::vector < std::vector <ECell> > board, Agent &agent, std::string teamStr);
     void findNearestSquares();
     void mostWeightedNearestSquare();
-    void findBestRoute(std::vector <int> &lastPos);
+    void findBestRoute();
     void updateCurrentSquareIndex();
     bool isNewSquare();
     bool isMostWeightedNearestSquareChanged();
@@ -39,7 +39,7 @@ public:
     Chillncode();
 private:
     void setEntryPositions();
-    void findAllRoutes(std::vector < std::vector < std::vector <int> > > &allRoutes, std::vector <int> &destination, std::vector <int> &lastPos);
+    void findAllRoutes(std::vector < std::vector < std::vector <int> > > &allRoutes, std::vector <int> &destination);
     bool isReached(std::vector < std::vector <int> > &reachedVertices, int i, int j);
     bool isRouteReachable(std::vector < std::vector <int> > &route);
     int findMostWeightedNearestSquareIndex();
@@ -195,65 +195,75 @@ bool Chillncode::isReached(std::vector < std::vector <int> > &reachedVertices, i
         return false;
 }
 
-void Chillncode::findAllRoutes(std::vector < std::vector < std::vector <int> > > &allRoutes, std::vector <int> &destination, std::vector <int> &lastPos)
+void Chillncode::findAllRoutes(std::vector < std::vector < std::vector <int> > > &allRoutes, std::vector <int> &destination)
 {
-    std::vector <int> agentPos = {myAgent.position().y(), myAgent.position().x()};
-    std::vector < std::vector <int> > pushedVertices;
+    std::vector <int> agentPos = { myAgent.position().y(), myAgent.position().x() };
+    std::map < std::vector <int>, std::vector < std::vector <int> > > vertices;
     std::vector < std::vector <int> > currentSquarePos = squares[currentSquareIndex].position();
-    std::queue < std::vector <int> > queue;
-    int i, j;
-    queue.push(agentPos);
-    allRoutes.push_back({{agentPos[0], agentPos[1]}});
-    pushedVertices.push_back(agentPos);
-    while(queue.size() != 0)
+
+    for (int i = currentSquarePos[0][0]; i <= currentSquarePos[1][0]; i++)
     {
-        std::vector <int> currentPos = queue.front();
-        queue.pop();
-        i = currentPos[0], j = currentPos[1];
-        std::vector <int> rowSteps = {-1, 1, 0, 0};
-        std::vector <int> columnSteps = {0, 0, 1, -1};
-        std::vector < std::vector <int> > neighbors;
-        for(int k = 0; k < 4; k++)
+        for (int j = currentSquarePos[0][1]; j <= currentSquarePos[1][1]; j++)
+        {
+            vertices.insert(std::pair < std::vector <int>, std::vector < std::vector <int> > > ({i,j}, {} ));
+        }
+    }
+
+    std::vector < std::vector <int> > mainRoute;
+    std::stack < std::vector <int> > stack;
+    int i, j;
+    i = agentPos[0], j = agentPos[1];
+    stack.push({ i, j });
+    mainRoute.push_back({ i, j });
+    do
+    {
+        std::vector <int> rowSteps = { -1, 1, 0, 0 };
+        std::vector <int> columnSteps = { 0, 0, 1, -1 };
+        std::vector <int> currentVertex = stack.top();
+        stack.pop();
+        i = currentVertex[0], j = currentVertex[1];
+        int k = 0;
+        while(k < 4)
         {
             int ii = i + rowSteps[k];
             int jj = j + columnSteps[k];
-            if(ii > currentSquarePos[1][0] || jj > currentSquarePos[1][1] || ii < currentSquarePos[0][0] || jj < currentSquarePos[0][1])
-                if(ii != destination[0] || jj != destination[1])
-                    continue;
-            if((i == agentPos[0] && j == agentPos[1]) && (ii == lastPos[0] && jj == lastPos[1]))
-                continue;
-            neighbors.push_back({ii, jj});
-            if(ii != destination[0] || jj != destination[1])
+            k++;
+            if (ii > currentSquarePos[1][0] || jj > currentSquarePos[1][1] || ii < currentSquarePos[0][0] || jj < currentSquarePos[0][1])
             {
-                bool isPushed = isReached(pushedVertices, ii, jj);
-                if(isPushed == false)
+                if (ii != destination[0] || jj != destination[1])
+                    continue;
+            }
+
+            bool reached = isReached(mainRoute, ii, jj);
+            if (reached == false)
+            {
+                std::map < std::vector <int>, std::vector < std::vector <int> > >::iterator itr = vertices.find({ i, j });
+                std::vector < std::vector <int> > reachedNeighbors = itr->second;
+                reached = isReached(reachedNeighbors, ii, jj);
+                if (reached == false)
                 {
-                    queue.push({ii, jj});
-                    pushedVertices.push_back({ii, jj});
+                    if (ii == destination[0] && jj == destination[1])
+                    {
+                        auto routeCopy = mainRoute;
+                        routeCopy.push_back({ ii, jj });
+                        allRoutes.push_back(routeCopy);
+                    }
+                    else
+                    {
+                        stack.push({ i, j });
+                        mainRoute.push_back({ ii, jj });
+                        i = ii, j = jj;
+                        k = 0;
+                    }
+                    itr->second.push_back({ ii, jj });
+                    continue;
                 }
             }
         }
-        for(int m = 0; m < allRoutes.size(); m++)
-        {
-           if(allRoutes[m].back()[0] == i && allRoutes[m].back()[1] == j)
-           {
-               std::vector < std::vector <int> > routeCopy = allRoutes[m];
-               std::vector < std::vector < std::vector <int> > >::iterator it = allRoutes.begin();
-               allRoutes.erase(it + m);
-               for(int l = 0; l < neighbors.size(); l++)
-               {
-                   bool reached = false;
-                   reached = isReached(routeCopy, neighbors[l][0], neighbors[l][1]);
-                   if(reached == false)
-                   {
-                        std::vector < std::vector <int> > temp = routeCopy;
-                        temp.push_back(neighbors[l]);
-                        allRoutes.push_back(temp);
-                   }
-               }
-           }
-        }
-    }
+        std::map < std::vector <int>, std::vector < std::vector <int> > >::iterator itr = vertices.find({ i, j });
+        itr->second.clear();
+        mainRoute.pop_back();
+    } while (!stack.empty());
 }
 
 void Chillncode::setEntryPositions()
@@ -298,28 +308,25 @@ void Chillncode::setEntryPositions()
     }
 }
 
-void Chillncode::findBestRoute(std::vector <int> &lastPos)
+void Chillncode::findBestRoute()
 {
     int maxWeight = 0;
     std::vector < std::vector < std::vector <int> > > mostWeightedRoutes;
     for(int i = 0; i < entryPositions.size(); i++)
     {
         std::vector < std::vector < std::vector <int> > > allRoutes;
-        findAllRoutes(allRoutes, entryPositions[i], lastPos);
+        findAllRoutes(allRoutes, entryPositions[i]);
         std::vector < std::vector <int> > maxRoute;
         for(int j = 0; j < allRoutes.size(); j++)
         {
-            if(allRoutes[j].back() == entryPositions[i])
+            int weight = findRouteWeight(allRoutes[j]);
+            if(weight > maxWeight)
             {
-                int weight = findRouteWeight(allRoutes[j]);
-                if(weight > maxWeight)
+                bool isReachable = isRouteReachable(allRoutes[j]);
+                if(isReachable == true)
                 {
-                    bool isReachable = isRouteReachable(allRoutes[j]);
-                    if(isReachable == true)
-                    {
-                        maxWeight = weight;
-                        maxRoute = allRoutes[j];
-                    }
+                    maxWeight = weight;
+                    maxRoute = allRoutes[j];
                 }
             }
         }

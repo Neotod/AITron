@@ -32,9 +32,8 @@ void AI::initialize()
     chillncode.setRequirements(board, agent, this->mySide);
     chillncode.makeSquares();
     chillncode.findNearestSquares();
-    agentLastPos = {agent.position().y(), agent.position().x()};
     chillncode.mostWeightedNearestSquare();
-    chillncode.findBestRoute(agentLastPos);
+    chillncode.findBestRoute();
 }
 
 void AI::decide()
@@ -43,21 +42,20 @@ void AI::decide()
     auto agent = this->world->agents()[this->mySide];
 
     chillncode.setRequirements(board, agent, this->mySide);
-    agentLastPos = {agent.position().y(), agent.position().x()};
 
     bool isNewSquare = chillncode.isNewSquare();
     if(isNewSquare == true)
     {
         chillncode.updateCurrentSquareIndex();
         chillncode.mostWeightedNearestSquare();
-        chillncode.findBestRoute(agentLastPos);
+        chillncode.findBestRoute();
     }
 
     bool isChanged = chillncode.isMostWeightedNearestSquareChanged();
     if(isChanged == true)
     {
         chillncode.mostWeightedNearestSquare();
-        chillncode.findBestRoute(agentLastPos);
+        chillncode.findBestRoute();
     }
 
     if(agent.wallBreakerCooldown() == 0)
