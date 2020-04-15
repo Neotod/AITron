@@ -14,8 +14,6 @@ using namespace ks::commands;
 
 Chillncode chillncode;
 
-std::vector <int> agentLastPos;
-
 AI::AI(World *world): RealtimeAI<World*>(world)
 {
 }
@@ -26,6 +24,8 @@ AI::~AI()
 
 void AI::initialize()
 {
+    chillncode.sayWelcome();
+
     vector < vector <ECell> > board = this->world->board();
     auto agent = this->world->agents()[this->mySide];
 
