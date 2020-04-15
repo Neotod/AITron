@@ -7,6 +7,7 @@
 #include "square.h"
 #include <vector>
 #include <stack>
+#include <iostream>
 
 using namespace koala::chillin::client;
 using namespace ks::models;
@@ -31,6 +32,7 @@ public:
     void mostWeightedNearestSquare();
     void findBestRoute();
     void updateCurrentSquareIndex();
+    void sayWelcome();
     bool isNewSquare();
     bool isMostWeightedNearestSquareChanged();
     bool isWallbreakerNeeded();
@@ -344,6 +346,7 @@ void Chillncode::findBestRoute()
             reachingPath = route;
         }
     }
+
     reachingPathIndex = 1;
 }
 
@@ -432,8 +435,8 @@ int Chillncode::findMostWeightedNearestSquareIndex()
     else
         myWall = ECell::YellowWall;
 
-    int maxWeight = 0, index = 0;
     std::vector <int> nearestSquares = squares[currentSquareIndex].nearestSquares();
+    std::vector <int> weights;
     for(int k = 0; k < nearestSquares.size(); k++)
     {
         int myWallsNum = 0, enemyWallsNum = 0, emptyWallsNum = 0;
@@ -451,15 +454,60 @@ int Chillncode::findMostWeightedNearestSquareIndex()
                     enemyWallsNum++;
             }
         }
-        int weight = (emptyWallsNum * 1) + (myWallsNum * - 1) + (enemyWallsNum * 0.6);
-        if(weight > maxWeight)
+        int weight = (emptyWallsNum * 1) + (myWallsNum * (-1)) + (enemyWallsNum * 0.6);
+        weights.push_back(weight);
+    }
+
+    auto currentSquarePos = squares[currentSquareIndex].position();
+    int verticalWeight = -1000, verticalIndex;
+    for(int i = 0; i < nearestSquares.size(); i++)
+    {
+        auto nearSquarePos = squares[nearestSquares[i]].position();
+        int newRow;
+        for(int j = 0; j < 2; j++)
         {
-            maxWeight = weight;
-            index = nearestSquares[k];
+            if(j == 0)
+                newRow = currentSquarePos[0][0] - 1;
+            else
+                newRow = currentSquarePos[1][0] + 1;
+
+            if(nearSquarePos[0][0] <= newRow && newRow <= nearSquarePos[1][0])
+            {
+                if(weights[i] > verticalWeight)
+                {
+                    verticalWeight = weights[i];
+                    verticalIndex = nearestSquares[i];
+                }
+                break;
+            }
         }
     }
 
-    return index;
+    int horizontalWeight = -1000, horizontalIndex;
+    for(int i = 0; i < nearestSquares.size(); i++)
+    {
+        auto nearSquarePos = squares[nearestSquares[i]].position();
+        int newColumn;
+        if(teamName == "Blue")
+            newColumn = currentSquarePos[1][1] + 1;
+        else
+            newColumn = currentSquarePos[0][1] - 1;
+        if(nearSquarePos[0][1] <= newColumn && newColumn <= nearSquarePos[1][1])
+        {
+            horizontalWeight = weights[i];
+            horizontalIndex = nearestSquares[i];
+            break;
+        }
+    }
+
+    if(verticalWeight < horizontalWeight)
+    {
+        return horizontalIndex;
+    }
+    else
+    {
+        return verticalIndex;
+    }
 }
 
 int Chillncode::findSquareNum(int posY, int posX)
@@ -548,9 +596,34 @@ bool Chillncode::isWallbreakerNeeded()
     int i = reachingPath[reachingPathIndex][0], j = reachingPath[reachingPathIndex][1];
 
     if(board()[i][j] != ECell::Empty)
+    {
         return true;
+    }
     else
         return false;
+}
+
+void Chillncode::sayWelcome()
+{
+    std::vector <std::string> chillncode = {
+        {'\n'},
+        {"   ==============================================================================="},
+        {"   ==============================================================================="},
+        {"   =====     ===  =========  ==  ==  =========  ====     =============  =========="},
+        {"   ====  ===  ==  =========  ==  === ========== ===  ===  ============  =========="},
+        {"   ===  ========  =========  ==  === ========== ==  ==================  =========="},
+        {"   ===  ========  =====  ==  ==  ======  = =======  =========   ======  ===   ===="},
+        {"   ===  ========    =======  ==  ======     ======  ========     ===    ==  =  ==="},
+        {"   ===  ========  =  ==  ==  ==  ======  =  ======  ========  =  ==  =  ==     ==="},
+        {"   ===  ========  =  ==  ==  ==  ======  =  ======  ========  =  ==  =  ==  ======"},
+        {"   ====  ===  ==  =  ==  ==  ==  ======  =  =======  ===  ==  =  ==  =  ==  =  ==="},
+        {"   =====     ===  =  ==  ==  ==  ======  =  ========     ====   ====    ===   ===="},
+        {"   ==============================================================================="},
+        {"   ==============================================================================="},
+        {'\n'}
+    };
+    for(int i = 0; i < chillncode.size(); i++)
+        std::cout << chillncode[i] << "\n";
 }
 
 EDirection Chillncode::nextDirection()
