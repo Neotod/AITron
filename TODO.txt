@@ -5,6 +5,6 @@ TODO:
 [+]debug find nearest squares function
 [+]write wallbreaker functions and fix it
 [+]debug finding routes functions(stage 1)
-[+]test that bitch :)))
-[ ]debug finding routes functions(stage 2: algorithm can't find all possible routes)
-
+[+]debug finding routes functions(stage 2: algorithm can't find all possible routes)
+[+]use DFS algorithm for finding all possible routes
+[+]fix find next most weighted nearest square(maybe still there are some bugs)
